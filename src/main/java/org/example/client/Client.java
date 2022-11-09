@@ -24,9 +24,9 @@ public class Client {
             host = properties.getProperty("SERVER_HOST");
             path = properties.getProperty("CLIENT_LOG");
         }   catch (IOException e) {
-                logger.log("Problem with FileReading",path);
-                e.printStackTrace();
-            }
+            logger.log("Problem with FileReading",path);
+            e.printStackTrace();
+        }
 
         try {
             this.socket = new Socket(host, port);
@@ -98,3 +98,4 @@ public class Client {
         }
     }
 }
+

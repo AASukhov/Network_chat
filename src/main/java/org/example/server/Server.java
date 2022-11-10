@@ -7,20 +7,22 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 
-public class Server implements Runnable{
+public class Server {
+    public static ArrayList<Socket> clients = new ArrayList<>();
+    public static void main(String[] args) {
+        ServerWork.ConnectWithServer.Connect();
+    }
+}
+
+class ServerWork implements Runnable {
     private static int port;
     private static String host;
     private static String path;
     private static final ServerLogger logger = ServerLogger.getInstance();
-    static Socket socket;
-    public static ArrayList<Socket> clients = new ArrayList<>();
+    Socket client;
 
-
-    public static void main (String[] args) {
-        Server.Connect();
-    }
-    public Server(Socket socket) {
-        Server.socket = socket;
+    public ServerWork(Socket socket) {
+        this.client = socket;
     }
 
     @Override
@@ -32,8 +34,9 @@ public class Server implements Runnable{
 
         while (true) {
             try {
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(this.client.getOutputStream(), true);
+                BufferedReader in = new BufferedReader(new InputStreamReader(this.client.getInputStream()));
+
                 String line;
                 while ((line = in.readLine()) != null) {
                     if (line.lastIndexOf("/name") == 0) {
@@ -44,14 +47,13 @@ public class Server implements Runnable{
                         continue;
                     }
                     send('[' + userName + "] " + line);
-                    if (line.equals("/exit")) {
-                        logger.log(userName + " вышел из чата", path);
-                        send(userName + " вышел из чата");
-                        clients.remove(socket);
-                        break;
-                    }
                 }
-
+                if (line.equals("/exit")) {
+                    logger.log(userName + " вышел из чата", path);
+                    send(userName + " вышел из чата");
+                    Server.clients.remove(client);
+                    break;
+                }
             } catch (IOException ex) {
                 logger.log(ex.getMessage(), path);
                 ex.printStackTrace(System.out);
@@ -60,7 +62,7 @@ public class Server implements Runnable{
     }
 
     private void send(String message) throws IOException {
-        for (Socket client : clients) {
+        for (Socket client : Server.clients) {
             if (client.isClosed()) continue;
             PrintWriter sender = new PrintWriter(client.getOutputStream());
             sender.println(message);
@@ -69,27 +71,29 @@ public class Server implements Runnable{
         logger.log(message,path);
     }
 
-    public static void Connect() {
-        try (FileReader reader = new FileReader("settings.txt")) {
-            Properties props = new Properties();
-            props.load(reader);
-            port = Integer.parseInt(props.getProperty("SERVER_PORT"));
-            host = props.getProperty("SERVER_HOST");
-            path = props.getProperty("SERVER_LOG");
-        } catch (IOException ex) {
-            logger.log(ex.getMessage(), path);
-            System.out.println(ex.getMessage());
-        }
-
-        try (ServerSocket server = new ServerSocket(port)) {
-            while (true) {
-                Socket client = server.accept();
-                clients.add(client);
-                new Thread(new Server(client)).start();
+    class ConnectWithServer {
+        public static void Connect() {
+            try (FileReader reader = new FileReader("settings.txt")) {
+                Properties props = new Properties();
+                props.load(reader);
+                port = Integer.parseInt(props.getProperty("SERVER_PORT"));
+                host = props.getProperty("SERVER_HOST");
+                path = props.getProperty("SERVER_LOG");
+            } catch (IOException ex) {
+                logger.log(ex.getMessage(), path);
+                System.out.println(ex.getMessage());
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            logger.log(e.getMessage(), path);
+
+            try (ServerSocket server = new ServerSocket(port)) {
+                while (true) {
+                    Socket client = server.accept();
+                    Server.clients.add(client);
+                    new Thread(new ServerWork(client)).start();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                logger.log(e.getMessage(), path);
+            }
         }
     }
 }

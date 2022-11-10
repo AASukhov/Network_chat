@@ -86,7 +86,7 @@ public class Client {
                 String userMsg;
                 userMsg = scanner.nextLine();
                 if (userMsg.equals("/exit")) {
-                    logger.log(" has left chat", path);
+                    logger.log("has left chat", path);
                     //out.println("user has left chat");
                     break;
                 }
